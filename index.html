@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Zakat Slot Booking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f1a;
+    --surface: #151829;
+    --card:    #1c2038;
+    --accent:  #6c63ff;
+    --accent2: #ff6584;
+    --green:   #00d68f;
+    --text:    #e8eaf0;
+    --muted:   #7b82a0;
+    --border:  #2a2f50;
+    --radius:  14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 20% 10%, rgba(108,99,255,.18) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255,101,132,.12) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* BOOKING PAGE */
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+  .header { text-align: center; margin-bottom: 48px; animation: fadeDown .6s ease both; }
+  .badge { display: inline-block; background: rgba(108,99,255,.15); border: 1px solid rgba(108,99,255,.35); color: #a09eff; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; padding: 5px 14px; border-radius: 100px; margin-bottom: 18px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-size: clamp(28px,6vw,46px); font-weight: 800; line-height: 1.1; background: linear-gradient(135deg,#fff 30%,#a09eff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px; }
+  .header p { color: var(--muted); font-size: 15px; max-width: 400px; margin: 0 auto; line-height: 1.6; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px; margin-bottom: 24px; animation: fadeUp .5s ease both; }
+  .panel-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .panel-title .icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(108,99,255,.2); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .panel-sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; padding-left: 42px; }
+  .slots-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 12px; }
+  .loading-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 12px; }
+  .skeleton { height: 90px; background: linear-gradient(90deg,var(--card) 25%,#222640 50%,var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--radius); border: 1px solid var(--border); }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .slot-card { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all .22s ease; position: relative; overflow: hidden; }
+  .slot-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(108,99,255,.12),transparent); opacity: 0; transition: .22s; }
+  .slot-card:hover:not(.booked)::before { opacity: 1; }
+  .slot-card:hover:not(.booked) { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(108,99,255,.2); }
+  .slot-card.selected { border-color: var(--accent); background: rgba(108,99,255,.15); box-shadow: 0 0 0 2px rgba(108,99,255,.3),0 8px 30px rgba(108,99,255,.2); }
+  .slot-card.selected::before { opacity: 1; }
+  .slot-card.booked { opacity: .45; cursor: not-allowed; filter: grayscale(.5); }
+  .slot-id { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+  .slot-date { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .slot-time { font-size: 14px; font-weight: 500; color: #a09eff; }
+  .slot-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .slot-badge { position: absolute; top: 10px; right: 10px; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 7px; border-radius: 100px; }
+  .slot-badge.available { background: rgba(0,214,143,.12); color: var(--green); border: 1px solid rgba(0,214,143,.25); }
+  .slot-badge.booked-badge { background: rgba(255,101,132,.1); color: var(--accent2); border: 1px solid rgba(255,101,132,.2); }
+  .slot-badge.selected-badge { background: var(--accent); color: #fff; border: none; }
+  .check-icon { display: none; position: absolute; bottom: 10px; right: 10px; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; align-items: center; justify-content: center; font-size: 10px; }
+  .slot-card.selected .check-icon { display: flex; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:540px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 7px; }
+  .form-group.full { grid-column: 1/-1; }
+  label { font-size: 12px; font-weight: 600; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; }
+  input { background: var(--card); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--text); font-family: 'DM Sans',sans-serif; font-size: 14px; outline: none; transition: border-color .2s,box-shadow .2s; }
+  input::placeholder { color: var(--muted); opacity: .6; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,.18); }
+  .selected-summary { background: rgba(108,99,255,.08); border: 1.5px solid rgba(108,99,255,.25); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .selected-summary strong { color: #a09eff; }
+  .btn { width: 100%; padding: 15px 24px; border: none; border-radius: 12px; font-family: 'Syne',sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: all .22s ease; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 24px; }
+  .btn-primary { background: linear-gradient(135deg,#6c63ff,#8b85ff); color: #fff; box-shadow: 0 6px 24px rgba(108,99,255,.35); }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(108,99,255,.5); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: none; }
+  .btn.loading .spinner { display: block; }
+  .btn.loading .btn-text { display: none; }
+  .no-slots { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #2d1f2e; border: 1px solid rgba(255,101,132,.4); color: #ff8fa3; padding: 12px 22px; border-radius: 100px; font-size: 13px; font-weight: 500; opacity: 0; transition: all .3s ease; z-index: 999; max-width: 92vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* CONFIRMATION PAGE */
+  .confirm-wrap { position: relative; z-index: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .confirm-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 48px 40px; max-width: 520px; width: 100%; text-align: center; animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both; }
+  .success-ring { width: 80px; height: 80px; border-radius: 50%; background: rgba(0,214,143,.1); border: 2px solid rgba(0,214,143,.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pulse 2.5s ease infinite; font-size: 32px; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,214,143,.3)} 50%{box-shadow:0 0 0 14px rgba(0,214,143,0)} }
+  .confirm-card h1 { font-family: 'Syne',sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg,#fff 30%,#7affcb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .confirm-subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.6; }
+  .details { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: left; margin-bottom: 28px; }
+  .details-title { font-family: 'Syne',sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+  .detail-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-icon { width: 32px; height: 32px; background: rgba(108,99,255,.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .detail-label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .4px; text-transform: uppercase; margin-bottom: 2px; }
+  .detail-value { font-size: 14px; font-weight: 500; }
+  .slot-highlight { color: #a09eff; font-family: 'Syne',sans-serif; font-weight: 700; }
+  .wa-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px 24px; background: linear-gradient(135deg,#25d366,#1ebe5d); color: #fff; text-decoration: none; border-radius: 14px; font-family: 'Syne',sans-serif; font-size: 15px; font-weight: 700; box-shadow: 0 6px 24px rgba(37,211,102,.3); transition: all .22s ease; margin-bottom: 14px; cursor: pointer; border: none; }
+  .wa-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(37,211,102,.45); }
+  .wa-icon { width: 22px; height: 22px; }
+  .confirm-note { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:none} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:none} }
+  @keyframes spin     { to{transform:rotate(360deg)} }
+  @keyframes popIn    { from{opacity:0;transform:scale(.88) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+</style>
+</head>
+<body>
+
+<!-- BOOKING PAGE -->
+<div id="bookingPage" class="page active">
+  <div class="container">
+    <div class="header">
+      <div class="badge">📋 Interview Booking</div>
+      <h1>Reserve Your Interview Zakat Slot</h1>
+      <p>Pick a time that works for you. Slots are 30 minutes each and limited.</p>
+    </div>
+    <div class="panel" style="animation-delay:.05s">
+      <div class="panel-title"><span class="icon">🗓</span> Available Interview Slots</div>
+      <div class="panel-sub">Select one slot below. Greyed-out slots are already taken.</div>
+      <div class="loading-grid" id="loadingGrid">
+        <div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+      <div class="slots-grid" id="slotsGrid" style="display:none"></div>
+    </div>
+    <div class="panel" style="animation-delay:.1s">
+      <div class="panel-title"><span class="icon">👤</span> Your Information</div>
+      <div class="panel-sub">Please fill in your details accurately.</div>
+      <div class="selected-summary" id="selectedSummary" style="display:none">
+        <span>✅</span>
+        <div>Selected: <strong id="summaryText">—</strong></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" placeholder="e.g. Ahmad bin Ibrahim" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="studentId">Student ID</label>
+          <input type="text" id="studentId" placeholder="e.g. 2024001234">
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" placeholder="e.g. 0123456789">
+        </div>
+      </div>
+      <button class="btn btn-primary" id="submitBtn" onclick="submitBooking()" disabled>
+        <span class="btn-text">📤 &nbsp;Submit Booking</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMATION PAGE -->
+<div id="confirmPage" class="page">
+  <div class="confirm-wrap">
+    <div class="confirm-card">
+      <div class="success-ring">✅</div>
+      <h1>Slot Booked!</h1>
+      <p class="confirm-subtitle">Your interview slot has been reserved.<br>Please send your details via WhatsApp to confirm.</p>
+      <div class="details">
+        <div class="details-title">📋 Booking Summary</div>
+        <div class="detail-row"><div class="detail-icon">🪪</div><div><div class="detail-label">Slot ID</div><div class="detail-value slot-highlight" id="cSlotId">—</div></div></div>
+        <div class="detail-row"><div class="detail-icon">📅</div><div><div class="detail-label">Date</div><div class="detail-value" id="cDate">—</div></div></div>
+        <div class="detail-row"><div class="detail-icon">🕐</div><div><div class="detail-label">Time</div><div class="detail-value" id="cTime">—</div></div></div>
+        <div class="detail-row"><div class="detail-icon">🏢</div><div><div class="detail-label">Venue</div><div class="detail-value">Bilik 4.25, Blok Perdana</div></div></div>
+        <div class="detail-row"><div class="detail-icon">👤</div><div><div class="detail-label">Name</div><div class="detail-value" id="cName">—</div></div></div>
+        <div class="detail-row"><div class="detail-icon">🎓</div><div><div class="detail-label">Student ID</div><div class="detail-value" id="cStudentId">—</div></div></div>
+        <div class="detail-row"><div class="detail-icon">📱</div><div><div class="detail-label">Phone</div><div class="detail-value" id="cPhone">—</div></div></div>
+      </div>
+      <button class="wa-btn" onclick="openWhatsApp()">
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+        Send via WhatsApp
+      </button>
+      <p class="confirm-note">Tap the button above to open WhatsApp. Your message is pre-filled — just press <strong>Send</strong>.<br>Your slot is reserved pending confirmation.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ▼▼▼ PASTE YOUR APPS SCRIPT WEB APP URL HERE (ends with /exec) ▼▼▼
+  var API_URL = 'https://script.google.com/macros/s/AKfycbwY5EnSEbInCMBZsazG2Ug3owaD413U4iMKB-dzeW6XxZgXRCLrv1Tg16HUHT5xPw3Z/exec';
+  // ▲▲▲ ─────────────────────────────────────────────────────── ▲▲▲
+
+  var slots = [];
+  var selectedSlotId = null;
+  var bookingData = {};
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // GET slots
+  function apiGetSlots() {
+    return fetch(API_URL + '?action=slots')
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) throw new Error(res.message || 'Failed to load slots');
+        return res.slots;
+      });
+  }
+
+  // POST booking (text/plain avoids a CORS preflight, which Apps Script can't answer)
+  function apiBook(payload) {
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); });
+  }
+
+  window.onload = function() {
+    apiGetSlots()
+      .then(renderSlots)
+      .catch(function(err) { showToast('Failed to load slots: ' + err.message); });
+  };
+
+  function renderSlots(data) {
+    slots = data;
+    var grid = document.getElementById('slotsGrid');
+    var loading = document.getElementById('loadingGrid');
+    if (!slots || slots.length === 0) {
+      grid.innerHTML = '<div class="no-slots">No slots available at the moment.</div>';
+    } else {
+      grid.innerHTML = slots.map(buildSlotCard).join('');
+    }
+    loading.style.display = 'none';
+    grid.style.display = 'grid';
+    if (selectedSlotId) {
+      var cur = document.getElementById('card-' + selectedSlotId);
+      if (cur) selectSlot(selectedSlotId);
+    }
+  }
+
+  function buildSlotCard(s) {
+    var isBooked = s.status === 'Booked';
+    var cls = isBooked ? 'slot-card booked' : 'slot-card';
+    var badge = isBooked
+      ? '<span class="slot-badge booked-badge">Booked</span>'
+      : '<span class="slot-badge available">Available</span>';
+    var labelHtml = s.label ? '<div class="slot-label">' + esc(s.label) + '</div>' : '';
+    return '<div class="' + cls + '" id="card-' + esc(s.id) + '" onclick="selectSlot(\'' + esc(s.id) + '\')">'
+      + badge + '<div class="slot-id">' + esc(s.id) + '</div>'
+      + '<div class="slot-date">' + esc(s.date) + '</div>'
+      + '<div class="slot-time">' + esc(s.time) + '</div>'
+      + labelHtml + '<div class="check-icon">✓</div></div>';
+  }
+
+  function selectSlot(id) {
+    var slot = null;
+    for (var i = 0; i < slots.length; i++) { if (slots[i].id == id) { slot = slots[i]; break; } }
+    if (!slot || slot.status === 'Booked') return;
+    if (selectedSlotId && selectedSlotId !== id) {
+      var prev = document.getElementById('card-' + selectedSlotId);
+      if (prev) {
+        prev.classList.remove('selected');
+        var pb = prev.querySelector('.slot-badge');
+        if (pb) { pb.className = 'slot-badge available'; pb.textContent = 'Available'; }
+      }
+    }
+    selectedSlotId = id;
+    var card = document.getElementById('card-' + id);
+    card.classList.add('selected');
+    var b = card.querySelector('.slot-badge');
+    if (b) { b.className = 'slot-badge selected-badge'; b.textContent = 'Selected'; }
+    document.getElementById('summaryText').textContent = slot.date + ' — ' + slot.time;
+    document.getElementById('selectedSummary').style.display = 'flex';
+    checkForm();
+  }
+
+  ['name','studentId','phone'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', checkForm);
+  });
+
+  function checkForm() {
+    var n = document.getElementById('name').value.trim();
+    var s = document.getElementById('studentId').value.trim();
+    var p = document.getElementById('phone').value.trim();
+    document.getElementById('submitBtn').disabled = !(n && s && p && selectedSlotId);
+  }
+
+  function submitBooking() {
+    var name      = document.getElementById('name').value.trim();
+    var studentId = document.getElementById('studentId').value.trim();
+    var phone     = document.getElementById('phone').value.trim();
+    if (!name || !studentId || !phone || !selectedSlotId) { showToast('Please fill in all fields and select a slot.'); return; }
+    var btn = document.getElementById('submitBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+    apiBook({ slotId: selectedSlotId, name: name, studentId: studentId, phone: phone })
+      .then(handleResult)
+      .catch(function(err) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showToast('Error: ' + err.message);
+      });
+  }
+
+  function handleResult(result) {
+    var btn = document.getElementById('submitBtn');
+    btn.classList.remove('loading');
+    if (!result.success) {
+      btn.disabled = false;
+      showToast('⚠️ ' + result.message);
+      selectedSlotId = null;
+      document.getElementById('selectedSummary').style.display = 'none';
+      apiGetSlots().then(renderSlots);
+      return;
+    }
+    bookingData = result.booking;
+    showConfirmation(bookingData);
+  }
+
+  function showConfirmation(b) {
+    document.getElementById('cSlotId').textContent    = b.slotId    || '—';
+    document.getElementById('cDate').textContent      = b.date      || '—';
+    document.getElementById('cTime').textContent      = b.time      || '—';
+    document.getElementById('cName').textContent      = b.name      || '—';
+    document.getElementById('cStudentId').textContent = b.studentId || '—';
+    document.getElementById('cPhone').textContent     = b.phone     || '—';
+    document.getElementById('bookingPage').classList.remove('active');
+    document.getElementById('confirmPage').classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function openWhatsApp() {
+    var b = bookingData;
+    var msg = '*Assalamualaikum Sir Syafiq,*\n\n'
+      + 'Saya ' + b.name + ' ingin mengesahkan tempahan slot temu duga berikut:\n\n'
+      + '🎓 *Interview Slot Booking*\n\n'
+      + '📌 *Slot ID:* ' + b.slotId + '\n'
+      + '📅 *Date:* '    + b.date   + '\n'
+      + '🕐 *Time:* '    + b.time   + '\n'
+      + '🏢 *Venue:*  Bilik 4.25, Blok Perdana \n'
+      + '👤 *Name:* '    + b.name   + '\n'
+      + '🎓 *Student ID:* ' + b.studentId + '\n'
+      + '📱 *Phone:* '   + b.phone  + '\n\n'
+      + '*Please bring all the required documents to the interview.*\n'
+      + '1. Salinan Penyata Gaji\n'
+      + '2. Borang Pengesahan Pendapatan Ibu Bapa\n'
+      + '3. 1 Bulan Penyata Bank Terkini\n\n'
+      + '_This booking was submitted via the Interview Slot Booking System._';
+    var url = 'https://wa.me/' + (b.waNumber || '60162099151') + '?text=' + encodeURIComponent(msg);
+    window.open(url, '_blank');
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 3500);
+  }
+</script>
+</body>
+</html>
